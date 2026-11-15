@@ -1,0 +1,37 @@
+# Android / Gradle
+.gradle/
+**/build/
+local.properties
+*.iml
+.idea/
+
+# Node / frontend
+node_modules/
+node_modules.incomplete/
+dist/
+.vite/
+npm-debug.log*
+
+# Local credentials and environment
+.env
+.env.*
+!.env.example
+google-services.json
+service-account*.json
+firebase-debug.log
+firestore-debug.log
+.firebase/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+
+# Local artifacts and generated files
+/tmp/
+/output/
+*.apk
+*.aab
+*.jks
+*.keystore
+*.log
+

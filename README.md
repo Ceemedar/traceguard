@@ -1,30 +1,69 @@
 # TraceGuard
 
-An Android device-recovery prototype with a React dashboard, built for a device owner's own phone with informed consent and Android permissions.
+An Android device-recovery app with a private web dashboard, built with Kotlin, React, TypeScript and Firebase.
 
-**[Open the live dashboard](https://traceguard-1a8c2.web.app)**
+**[Open the live dashboard](https://traceguard-1a8c2.web.app)** · **[Architecture](docs/architecture.md)** · **[Setup and deployment](docs/deployment.md)**
 
-## Download the project
+![TraceGuard owner sign-in screen](docs/images/sign-in.jpg)
 
-**[Download the complete source code](traceguard-source.zip)** and extract it before following the setup instructions. The archive contains 54 project files with their original folder structure. Source files are currently distributed as this archive; they are not yet available as individual files in this repository.
+## Features
+
+- Owner account sign-in and device registration
+- Latest location, location history and map display
+- Battery, connection and report freshness information
+- Permission-based periodic reporting and active tracking
+- Offline report storage and synchronization
+- Optional notification forwarding with Android Notification Access
+- Account-scoped Firestore rules and web-session controls
 
 ## Technology
 
-- Android: Kotlin, Android SDK, Room, WorkManager, Gradle
-- Web: React, TypeScript, Vite
-- Backend: Firebase Authentication, Cloud Firestore, Firebase Hosting
+| Layer | Stack |
+| --- | --- |
+| Android | Kotlin, Android SDK, Room, WorkManager, Gradle |
+| Dashboard | React, TypeScript, Vite, Leaflet |
+| Backend | Firebase Authentication, Cloud Firestore, Firebase Hosting |
 
-## Included in the source archive
+## Project layout
 
-- `android/`: Android application and Gradle wrapper
-- `website/`: Web dashboard, dependencies manifest, and Firestore rules tests
-- `firebase/`: Firestore security rules and indexes
-- `docs/`: Architecture, permissions, deployment instructions, and roadmap
-- `README.md`: Development prerequisites and build instructions
-- `.env.example`: Firebase web configuration template
+```text
+android/       Android application and Gradle wrapper
+website/       React dashboard and Firestore security rules tests
+firebase/      Firestore security rules and indexes
+docs/          Architecture, permissions, deployment and screenshots
+```
 
-Local credentials, environment configuration, generated builds, APKs, temporary files, and personal documents are excluded. Supply your own Firebase configuration as described in the included documentation.
+The source is browsable in these folders. `traceguard-source.zip` is the earlier source snapshot; use the folders on the main branch for the current version.
 
-## Project status
+## Development setup
 
-The dashboard is deployed. The Android client is a prototype; validate permission handling, background scheduling, offline behavior, and account deletion on the target device before relying on it for recovery. Reports depend on Android scheduling, connectivity, permissions, and battery policy.
+Use Android Studio with a compatible Android SDK and JDK, Node.js and npm for the website, and Firebase CLI with Java 21+ for current Firestore Emulator tooling.
+
+1. Supply your own Android Firebase configuration as `android/app/google-services.json`.
+2. Copy `.env.example` to `website/.env.local` and provide your Firebase web app configuration.
+3. Build the dashboard:
+
+```powershell
+cd website
+npm ci
+npm run build
+```
+
+4. Build the Android debug APK:
+
+```powershell
+cd android
+.\gradlew.bat :app:assembleDebug
+```
+
+Run each command block from the repository root. The APK is written to `android/app/build/outputs/apk/debug/app-debug.apk`.
+
+Environment files, signing keys, APKs, generated builds and personal documents are excluded from source control. Firebase client configuration does not replace database access controls.
+
+## Validation
+
+The project owner reports that the apps have been fully tested. During portfolio preparation on 15 November 2026, the dashboard production build passed. See [validation notes](docs/validation.md) for the scope of independent checks and environment limitations.
+
+## Operating limits
+
+TraceGuard is designed for the owner's own phone with informed consent. Android permissions, battery policies, connectivity and scheduling affect reporting. Active tracking uses Android's foreground-service notification. Force-stop, power-off and revoked permissions can interrupt reports. See [permissions](docs/permissions.md).
