@@ -1,0 +1,152 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function owns(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    function validDevice(data, deviceId) {
+      return data.keys().hasOnly([
+          'deviceId', 'displayName', 'platform', 'registeredAt', 'trackingStatus'
+        ])
+        && data.keys().hasAll([
+          'deviceId', 'displayName', 'platform', 'registeredAt', 'trackingStatus'
+        ])
+        && data.deviceId == deviceId
+        && data.displayName is string
+        && data.displayName.size() > 0
+        && data.displayName.size() <= 80
+        && data.platform == 'android'
+        && data.registeredAt is timestamp
+        && data.trackingStatus in ['active', 'paused', 'revoked'];
+    }
+
+    function validLocation(data, locationId) {
+      return data.keys().hasOnly([
+          'locationId', 'latitude', 'longitude', 'accuracyMeters', 'recordedAt',
+          'receivedAt', 'batteryPercentage', 'charging', 'connectionType',
+          'networkOperator', 'wifiSsid', 'internetValidated'
+        ])
+        && data.keys().hasAll([
+          'locationId', 'latitude', 'longitude', 'accuracyMeters', 'recordedAt',
+          'receivedAt'
+        ])
+        && data.locationId == locationId
+        && data.latitude is number
+        && data.latitude >= -90
+        && data.latitude <= 90
+        && data.longitude is number
+        && data.longitude >= -180
+        && data.longitude <= 180
+        && data.accuracyMeters is number
+        && data.accuracyMeters >= 0
+        && data.accuracyMeters <= 100000
+        && data.recordedAt is timestamp
+        && data.receivedAt == request.time
+        && (!('batteryPercentage' in data)
+          || data.batteryPercentage == null
+          || (data.batteryPercentage is int
+            && data.batteryPercentage >= 0
+            && data.batteryPercentage <= 100))
+        && (!('charging' in data)
+          || data.charging == null
+          || data.charging is bool)
+        && (!('connectionType' in data)
+          || data.connectionType == null
+          || data.connectionType in ['wifi', 'mobile', 'ethernet', 'none', 'unknown'])
+        && (!('networkOperator' in data)
+          || data.networkOperator == null
+          || (data.networkOperator is string && data.networkOperator.size() <= 80))
+        && (!('wifiSsid' in data)
+          || data.wifiSsid == null
+          || (data.wifiSsid is string && data.wifiSsid.size() <= 128))
+        && (!('internetValidated' in data)
+          || data.internetValidated == null
+          || data.internetValidated is bool);
+    }
+
+    function validNotification(data, notificationId) {
+      return data.keys().hasOnly([
+          'notificationId', 'appName', 'packageName', 'title', 'body', 'postedAt', 'receivedAt'
+        ])
+        && data.keys().hasAll([
+          'notificationId', 'appName', 'packageName', 'title', 'body', 'postedAt', 'receivedAt'
+        ])
+        && data.notificationId == notificationId
+        && data.appName is string
+        && data.appName.size() > 0
+        && data.appName.size() <= 100
+        && data.packageName is string
+        && data.packageName.size() > 0
+        && data.packageName.size() <= 200
+        && data.title is string
+        && data.title.size() <= 300
+        && data.body is string
+        && data.body.size() <= 2000
+        && data.postedAt is timestamp
+        && data.receivedAt == request.time;
+    }
+
+    function validWebSession(data) {
+      return data.keys().hasOnly([
+          'createdAt', 'deviceLabel', 'lastSeen', 'revokedAt'
+        ])
+        && data.keys().hasAll(['lastSeen'])
+        && data.lastSeen is timestamp
+        && (!('createdAt' in data) || data.createdAt is timestamp)
+        && (!('deviceLabel' in data)
+          || (data.deviceLabel is string
+            && data.deviceLabel.size() > 0
+            && data.deviceLabel.size() <= 80))
+        && (!('revokedAt' in data)
+          || data.revokedAt == null
+          || data.revokedAt is timestamp);
+    }
+
+    match /users/{userId}/devices/{deviceId} {
+      allow get, list: if owns(userId);
+      allow create: if owns(userId)
+        && validDevice(request.resource.data, deviceId)
+        && request.resource.data.registeredAt == request.time;
+      allow update: if owns(userId)
+        && validDevice(request.resource.data, deviceId)
+        && request.resource.data.deviceId == resource.data.deviceId
+        && request.resource.data.platform == resource.data.platform
+        && request.resource.data.registeredAt == resource.data.registeredAt;
+      allow delete: if owns(userId);
+
+      match /locations/{locationId} {
+        allow get, list: if owns(userId);
+        allow create: if owns(userId)
+          && get(/databases/$(database)/documents/users/$(userId)/devices/$(deviceId)).data.trackingStatus == 'active'
+          && validLocation(request.resource.data, locationId);
+        allow update: if false;
+        allow delete: if owns(userId);
+      }
+
+      match /notifications/{notificationId} {
+        allow get, list: if owns(userId);
+        allow create, update: if owns(userId)
+          && validNotification(request.resource.data, notificationId);
+        allow delete: if owns(userId);
+      }
+    }
+
+    match /users/{userId}/webSessions/{sessionId} {
+      allow get, list: if owns(userId);
+      allow create: if owns(userId)
+        && validWebSession(request.resource.data);
+      allow update: if owns(userId)
+        && validWebSession(request.resource.data)
+        && (!('revokedAt' in resource.data)
+          || resource.data.revokedAt == null
+          || request.resource.data.revokedAt == resource.data.revokedAt);
+      allow delete: if owns(userId);
+    }
+
+    // All other paths, including user profiles, are private by default.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
